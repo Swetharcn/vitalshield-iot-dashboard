@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VitalShield | IoT Patient Monitoring Console</title>
+    <!-- Google Fonts: Outfit for a premium, modern, tech-focused typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for high-quality medical and dashboard icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Chart.js CDN for plotting our real-time graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Dashboard Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-heart-pulse pulse-animation"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>VitalShield</h1>
+                    <p>Clinical Telemetry Console</p>
+                </div>
+            </div>
+            
+            <!-- Patient Diagnostics Header Area -->
+            <div class="device-status-card">
+                <div class="status-indicator-group">
+                    <span class="status-dot pulsing" id="connection-dot"></span>
+                    <span class="status-label" id="connection-status">Connecting...</span>
+                </div>
+                <div class="device-meta-row">
+                    <span class="meta-item"><i class="fa-solid fa-user-clock text-spo2"></i> State: <strong id="patient-state-display">--</strong></span>
+                    <span class="meta-item"><i class="fa-solid fa-battery-three-quarters text-success" id="battery-icon"></i> <strong id="battery-display">--%</strong></span>
+                    <span class="meta-item"><i class="fa-solid fa-wifi text-muted" id="rssi-icon"></i> <strong id="rssi-display">-- dBm</strong></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Content -->
+        <main class="dashboard-content">
+            
+            <!-- Cards Grid: Quick Stats -->
+            <section class="metrics-grid">
+                
+                <!-- Heart Rate Card -->
+                <div class="metric-card hr-card" id="card-heart-rate">
+                    <div class="card-glow"></div>
+                    <div class="card-header">
+                        <span class="card-title">Heart Rate</span>
+                        <div class="card-icon hr-icon-bg">
+                            <i class="fa-solid fa-heartbeat heart-beat-action"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="metric-value-container">
+                            <span class="metric-value" id="val-heart-rate">--</span>
+                            <span class="metric-unit">bpm</span>
+                        </div>
+                        <div class="metric-status status-normal" id="status-heart-rate">Waiting for data...</div>
+                    </div>
+                    <div class="card-footer">
+                        <span class="range-info">Normal: 70 - 95 bpm (Alert > 100)</span>
+                    </div>
+                </div>
+
+                <!-- SpO2 Card -->
+                <div class="metric-card spo2-card" id="card-spo2">
+                    <div class="card-glow"></div>
+                    <div class="card-header">
+                        <span class="card-title">Oxygen Saturation</span>
+                        <div class="card-icon spo2-icon-bg">
+                            <i class="fa-solid fa-wind"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="metric-value-container">
+                            <span class="metric-value" id="val-spo2">--</span>
+                            <span class="metric-unit">%</span>
+                        </div>
+                        <div class="metric-status status-normal" id="status-spo2">Waiting for data...</div>
+                    </div>
+                    <div class="card-footer">
+                        <span class="range-info">Normal: 95 - 100 % (Alert < 94)</span>
+                    </div>
+                </div>
+
+                <!-- Temperature Card -->
+                <div class="metric-card temp-card" id="card-temp">
+                    <div class="card-glow"></div>
+                    <div class="card-header">
+                        <span class="card-title">Body Temperature</span>
+                        <div class="card-icon temp-icon-bg">
+                            <i class="fa-solid fa-thermometer-half"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="metric-value-container">
+                            <span class="metric-value" id="val-temp">--</span>
+                            <span class="metric-unit">°C</span>
+                        </div>
+                        <div class="metric-status status-normal" id="status-temp">Waiting for data...</div>
+                    </div>
+                    <div class="card-footer">
+                        <span class="range-info">Normal: 36.2 - 37.5 °C (Alert > 38)</span>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Charts Grid: Historical Graphs -->
+            <section class="charts-grid">
+                
+                <!-- Heart Rate Chart Card -->
+                <div class="chart-container-card">
+                    <div class="chart-header">
+                        <h3><i class="fa-solid fa-chart-line text-hr"></i> Heart Rate History</h3>
+                        <span class="chart-subtitle">Real-time physiological telemetry (bpm)</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="heartRateChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- SpO2 Chart Card -->
+                <div class="chart-container-card">
+                    <div class="chart-header">
+                        <h3><i class="fa-solid fa-chart-line text-spo2"></i> Oxygen Saturation (SpO2)</h3>
+                        <span class="chart-subtitle">Blood Oxygen Telemetry (%)</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="spo2Chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Temperature Chart Card -->
+                <div class="chart-container-card">
+                    <div class="chart-header">
+                        <h3><i class="fa-solid fa-chart-line text-temp"></i> Temperature History</h3>
+                        <span class="chart-subtitle">Thermal Body Telemetry (°C)</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="tempChart"></canvas>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Bottom Clinical Diagnostics & Logs Panel -->
+            <section class="diagnostics-grid">
+                
+                <!-- Telemetry Event Log Card -->
+                <div class="diagnostic-card log-card">
+                    <div class="card-header-row">
+                        <h3><i class="fa-solid fa-clipboard-list text-spo2"></i> Clinical Telemetry Event Log</h3>
+                        <button class="btn-export" id="btn-export-csv" title="Export current dataset to CSV">
+                            <i class="fa-solid fa-file-csv"></i> Export CSV
+                        </button>
+                    </div>
+                    <div class="log-table-wrapper">
+                        <table class="log-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Event Details</th>
+                                    <th>Severity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="event-log-tbody">
+                                <tr>
+                                    <td colspan="3" class="empty-log"><i class="fa-solid fa-spinner fa-spin"></i> Waiting for patient connection...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Patient Health Risk & JSON Log Card -->
+                <div class="diagnostic-card risk-card">
+                    <h3><i class="fa-solid fa-shield-heart text-hr"></i> Patient Health Risk Diagnostics</h3>
+                    
+                    <!-- Calculated Risk Severity Indicator -->
+                    <div class="risk-indicator-box risk-low" id="risk-box">
+                        <div class="risk-header">
+                            <span class="risk-label-title">Composite Risk Index:</span>
+                            <span class="risk-status-badge" id="risk-badge">Low Risk</span>
+                        </div>
+                        <p class="risk-description" id="risk-desc">Waiting for biometric streams to calculate risk index.</p>
+                    </div>
+                    
+                    <!-- Raw Telemetry console display nested -->
+                    <div class="console-sub-panel">
+                        <div class="console-sub-header">
+                            <span><i class="fa-solid fa-code text-secondary"></i> Raw IoT JSON Payload</span>
+                            <span class="console-indicator-dot active"></span>
+                        </div>
+                        <pre id="json-console">// Synchronizing connection... No payload received yet.</pre>
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+
+        <!-- Dashboard Footer -->
+        <footer class="app-footer">
+            <div class="footer-left">
+                <p>&copy; 2026 VitalShield IoT. All rights reserved.</p>
+            </div>
+            <div class="footer-right">
+                <span class="update-info"><i class="fa-solid fa-clock"></i> Last Synced: <strong id="last-updated-time">Never</strong></span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Custom JS script for fetching and plotting data -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
